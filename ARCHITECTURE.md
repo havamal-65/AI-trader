@@ -287,27 +287,6 @@ Happy to drill into any layer in detail — regime detection math, specific stra
 
 ## Appendix A — Build Path: Custom vs Freqtrade vs Hybrid
 
-The framework choice is really a question about *where* you spend effort, not whether. Here's the honest tradeoff.
-
-### Effort comparison
-
-| Component | Custom (from scratch) | Freqtrade-based |
-| --- | --- | --- |
-| Exchange connectivity, WS, reconnects, rate limits | 1–2 weeks | Free |
-| OHLCV fetching + storage | 1 week | Free |
-| Order execution (limit orders, partial fills, idempotency, retries) | 2–3 weeks | Free |
-| Backtest engine | 2–3 weeks (or vectorbt: 3 days) | Free |
-| Position/portfolio state | 1 week | Free |
-| Paper trading mode | 1 week | Free (`dry_run=true`) |
-| Dashboard | 1 week | Free (FreqUI) |
-| Risk overlay | 1 week | 3–5 days |
-| Regime detector | 1–2 weeks | 1–2 weeks (same either way) |
-| Strategy library | 2–3 days each | 2–3 days each |
-| **Strategy selector** | **1 week, clean design** | **1–2 weeks, fighting the framework** |
-| **Total to first paper trade** | **~3–4 months** | **~3–4 weeks** |
-
-Custom is roughly 4x the effort. Most of that effort goes into rebuilding plumbing that already works.
-
 ### The one real advantage of going custom
 
 Freqtrade is built around *"one strategy per bot."* This architecture is built around *dynamically swapping strategies based on regime.* That mismatch is the actual cost of using Freqtrade — and the only genuine reason to consider going custom.
@@ -322,7 +301,7 @@ Concrete consequences:
 
 Don't pay the orchestration tax until you have evidence the selector is doing real work.
 
-#### v1: Pure Freqtrade with a meta-strategy (~3–4 weeks)
+#### v1: Pure Freqtrade with a meta-strategy
 
 One Freqtrade instance running a single `RegimeAwareStrategy` class that internally branches on regime.
 
@@ -351,7 +330,7 @@ class RegimeAwareStrategy(IStrategy):
 
 **Phase gate to v2:** when you have 60+ days of paper trading data showing two or more strategies have *different* regime fitness, and you want to allocate capital between them dynamically.
 
-#### v2: Hybrid orchestrator (~2–3 weeks on top of v1)
+#### v2: Hybrid orchestrator
 
 Freqtrade becomes the execution layer only. A separate orchestrator process owns regime detection and capital allocation.
 
