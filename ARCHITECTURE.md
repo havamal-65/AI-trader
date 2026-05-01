@@ -282,3 +282,113 @@ Before building, answer these:
 5. Pick the first strategy to implement (momentum is the easiest to get right)
 
 Happy to drill into any layer in detail — regime detection math, specific strategy logic, the risk module, the selector design, or the Freqtrade integration approach.
+
+-----
+
+## Appendix A — Build Path: Custom vs Freqtrade vs Hybrid
+
+The framework choice is really a question about *where* you spend effort, not whether. Here's the honest tradeoff.
+
+### Effort comparison
+
+| Component | Custom (from scratch) | Freqtrade-based |
+| --- | --- | --- |
+| Exchange connectivity, WS, reconnects, rate limits | 1–2 weeks | Free |
+| OHLCV fetching + storage | 1 week | Free |
+| Order execution (limit orders, partial fills, idempotency, retries) | 2–3 weeks | Free |
+| Backtest engine | 2–3 weeks (or vectorbt: 3 days) | Free |
+| Position/portfolio state | 1 week | Free |
+| Paper trading mode | 1 week | Free (`dry_run=true`) |
+| Dashboard | 1 week | Free (FreqUI) |
+| Risk overlay | 1 week | 3–5 days |
+| Regime detector | 1–2 weeks | 1–2 weeks (same either way) |
+| Strategy library | 2–3 days each | 2–3 days each |
+| **Strategy selector** | **1 week, clean design** | **1–2 weeks, fighting the framework** |
+| **Total to first paper trade** | **~3–4 months** | **~3–4 weeks** |
+
+Custom is roughly 4x the effort. Most of that effort goes into rebuilding plumbing that already works.
+
+### The one real advantage of going custom
+
+Freqtrade is built around *"one strategy per bot."* This architecture is built around *dynamically swapping strategies based on regime.* That mismatch is the actual cost of using Freqtrade — and the only genuine reason to consider going custom.
+
+Concrete consequences:
+
+- **Design 1 (hard mapping):** workable in Freqtrade as a meta-strategy, but the regime branch logic lives inside one Python file alongside the strategy logic.
+- **Design 2 (performance-weighted ensemble):** genuinely awkward in Freqtrade. The framework doesn't allocate capital across strategies based on per-regime live performance. You'd be working against the grain.
+- **Per-strategy-per-regime metrics:** Freqtrade tracks per-strategy. The regime-aware analytics layer is custom either way.
+
+### Recommended progression: v1 meta-strategy → v2 hybrid orchestrator
+
+Don't pay the orchestration tax until you have evidence the selector is doing real work.
+
+#### v1: Pure Freqtrade with a meta-strategy (~3–4 weeks)
+
+One Freqtrade instance running a single `RegimeAwareStrategy` class that internally branches on regime.
+
+```python
+# user_data/strategies/regime_aware.py (sketch)
+class RegimeAwareStrategy(IStrategy):
+    def populate_indicators(self, df, metadata):
+        df = add_regime_indicators(df)   # ADX, ATR, BB width
+        df['regime'] = classify_regime(df)
+        df = add_momentum_indicators(df)
+        df = add_mean_reversion_indicators(df)
+        return df
+
+    def populate_entry_trend(self, df, metadata):
+        trending = df['regime'].isin(['TRENDING_UP'])
+        ranging  = df['regime'].isin(['RANGING_LOW'])
+
+        df.loc[trending & momentum_signal(df), 'enter_long'] = 1
+        df.loc[ranging  & mean_reversion_signal(df), 'enter_long'] = 1
+        # CHOPPY → no entry, intentionally
+        return df
+```
+
+**Pros:** fastest path to a working bot; one process; one config; easy backtest.
+**Cons:** strategies are coupled in one file; can't weight strategies; per-strategy metrics are messy.
+
+**Phase gate to v2:** when you have 60+ days of paper trading data showing two or more strategies have *different* regime fitness, and you want to allocate capital between them dynamically.
+
+#### v2: Hybrid orchestrator (~2–3 weeks on top of v1)
+
+Freqtrade becomes the execution layer only. A separate orchestrator process owns regime detection and capital allocation.
+
+```mermaid
+flowchart TB
+    O[Orchestrator<br/>Python service]
+    O -->|reads OHLCV| D[(Market data)]
+    O --> R[Regime Detector]
+    O --> S[Selector / Weighter]
+    S -->|REST API| F1[Freqtrade: Momentum]
+    S -->|REST API| F2[Freqtrade: MeanRev]
+    S -->|REST API| F3[Freqtrade: BBReversal]
+    F1 --> E[Exchange]
+    F2 --> E
+    F3 --> E
+    F1 --> P[(Trade log)]
+    F2 --> P
+    F3 --> P
+    P --> O
+```
+
+**Each Freqtrade instance** runs one strategy in isolation. The orchestrator:
+
+1. Pulls OHLCV every N minutes, classifies the regime.
+2. Computes per-strategy weights (hard map in v2.0; performance-weighted in v2.1).
+3. Calls each Freqtrade instance's REST API to enable/disable trading and adjust `max_open_trades` proportional to weight.
+4. Pulls trade logs from each instance into a shared store for per-strategy-per-regime metrics.
+
+**Pros:** clean separation; strategies are independently testable; supports Design 2 ensemble naturally; per-strategy metrics for free.
+**Cons:** N processes to monitor; config drift risk; orchestrator is a new failure mode.
+
+**Operational notes:**
+
+- Run all Freqtrade instances against the same paper trading account first; only one account goes live initially.
+- The orchestrator must be idempotent — if it crashes mid-cycle, restarting shouldn't double-toggle anything.
+- Build the orchestrator with a "panic" command that flattens all instances simultaneously (kill switch from Layer 5).
+
+### Why not start with v2
+
+Because the orchestration layer is only valuable if you have multiple strategies that earn their keep in different regimes. You don't know that yet. Build v1, paper trade it long enough to see real per-regime performance differences, *then* invest in v2. If the data shows one strategy dominates regardless of regime, v2 is overengineering.
