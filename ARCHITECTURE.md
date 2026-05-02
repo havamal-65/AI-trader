@@ -196,25 +196,13 @@ The trade log is what lets you debug "why did the bot do that?" six months from 
 
 -----
 
-## Tech Stack Recommendation
+## Tech Stack
 
-Given your prior Freqtrade exploration, two real paths:
+**Recommendation: Freqtrade as the execution layer + custom regime detector and selector on top.** Inherit the boring infrastructure (exchange connectors, order management, backtesting, paper trading, dashboard) and spend brain budget on the interesting layer.
 
-### Path A: Build on Freqtrade (faster start)
+If Freqtrade ever hits a wall, the fallback custom stack is `ccxt` + `pandas`/`polars` + `vectorbt` + `FastAPI` + `PostgreSQL`.
 
-- ✅ Battle-tested execution, exchange connectors, backtesting framework
-- ✅ Strategy plugins fit your "library of strategies" model naturally
-- ❌ Regime detection + strategy selector layer would be custom on top
-- **Verdict:** good v1 path. You inherit a working execution engine.
-
-### Path B: Custom Python from scratch (more control, more work)
-
-- Stack: `ccxt` (exchange API) + `pandas`/`polars` + `vectorbt` (backtesting) + `FastAPI` dashboard + `PostgreSQL` for trade log
-- ✅ Full control of architecture
-- ❌ You'll spend 2 months on plumbing before placing one trade
-- **Verdict:** only if Freqtrade hits a wall.
-
-**Recommendation: Freqtrade base + custom regime detector and selector layered on top.** That matches the "build only what doesn't exist" principle and lets you focus learning on the interesting part (strategy selection) instead of WebSocket reconnection logic.
+See **Appendix A** for the detailed build path (v1 meta-strategy → v2 hybrid orchestrator) and the one real argument for going custom.
 
 -----
 
