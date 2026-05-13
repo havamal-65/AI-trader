@@ -1,0 +1,56 @@
+# ─── Secrets — NEVER commit ─────────────────────────────────────────
+# The real config.json holds exchange API keys, JWT secret, FreqUI password,
+# and the dry_run flag. Only the sanitized template is committed.
+user_data/config.json
+user_data/config.live.json
+*.live.json
+.env
+
+# ─── Generated artifacts (large, reproducible) ──────────────────────
+# Trade DB and its SQLite write-ahead-log sidecars
+user_data/*.sqlite
+user_data/*.sqlite-shm
+user_data/*.sqlite-wal
+user_data/tradesv3*
+
+# Freqtrade output directories
+user_data/logs/
+user_data/data/
+user_data/backtest_results/
+user_data/plot/
+user_data/hyperopt_results/
+user_data/freqaimodels/
+
+# Hyperopt best-params output (regenerable from .fthypt)
+user_data/strategies/*.json
+
+# ─── Experimental artifacts (kept locally, not shipped) ─────────────
+user_data/strategies/regime_aware_strategy_15m.py
+user_data/strategies/regime_aware_strategy_mta.py
+user_data/strategies/momentum_scalp_15m.py
+user_data/strategies/donchian_breakout_1h.py
+user_data/strategies/donchian_breakout_15m.py
+user_data/notebooks/
+user_data/config_lookahead.json
+user_data/hyperopts/
+
+# ─── Python ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ─── Editor / local tooling ─────────────────────────────────────────
+.claude/
+.vscode/
+.idea/
+*.swp
+
+# ─── OS ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

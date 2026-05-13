@@ -206,6 +206,26 @@ See **Appendix A** for the detailed build path (v1 meta-strategy → v2 hybrid o
 
 -----
 
+## Implementation Notes (what was actually built)
+
+The plan above is the design spec; this section records the concrete implementation choices.
+
+**Strategy (1h, currently running paper):**
+- `RegimeClassifier` — ADX(14), BB-width(20), ATR-ratio with 30-bar median, EMA(50) slope → labels: `TRENDING_UP / TRENDING_DOWN / RANGING_LOW / RANGING_HIGH / CHOPPY`.
+- `RegimeAwareStrategy` — hard-mapped selector (Design 1 from above), shorts enabled, leverage locked at 1x, 2% stoploss, no `minimal_roi` ladder (signal-exit driven).
+
+**Risk layer (above Freqtrade's stoploss):**
+- `StoplossGuard` — pause new entries after 2 stops in 24 candles.
+- `MaxDrawdown` — daily 3%, weekly 8%.
+- `RiskManager.approve_entry()` — correlation veto, max 2 of {BTC, ETH, SOL} held simultaneously.
+
+**Monitoring infrastructure (cross-platform Python, stdlib only):**
+- `tools/monitor.py` polls Freqtrade's REST API on a configurable interval, computes a 0–100% proximity score per pair (how close it is to firing a trade given regime + RSI gates), and fires desktop notifications on entry signals.
+- `tools/daily_report.py` writes a P&L / Sharpe / max-drawdown summary to `user_data/logs/report_YYYY-MM-DD.txt`. Schedule via Task Scheduler on Windows or cron on Linux.
+- `tools/notify.py` abstracts notifications: BurntToast on Windows, `notify-send` on Linux, silent fallback elsewhere. Notifications never raise — the monitor and report continue to work without a desktop session (e.g. on a headless VPS).
+
+-----
+
 ## Phased Build Plan
 
 ```mermaid

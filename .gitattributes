@@ -1,0 +1,11 @@
+# Force LF line endings on shell scripts so they remain executable on Linux
+# regardless of the developer's local autocrlf setting.
+*.sh   text eol=lf
+*.bash text eol=lf
+
+# Windows batch files must have CRLF endings.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# Everything else: let Git handle line endings normally
+*      text=auto
