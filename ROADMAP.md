@@ -162,6 +162,7 @@ Full design in [ARCHITECTURE.md — Appendix A](ARCHITECTURE.md).
 | `tools/notify.py` | Cross-platform desktop notification helper |
 | `tools/monitor.py` | Live signal monitor |
 | `tools/daily_report.py` | End-of-day performance report |
+| `tools/weekly_check.py` | Weekly headless Claude health check |
 | `tools/start_monitor.bat`, `tools/start_monitor.sh` | Monitor launchers (Windows / Linux) |
 
 **Runtime artifacts (gitignored):**

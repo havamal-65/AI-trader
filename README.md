@@ -63,6 +63,7 @@ Full system design, build phases, and the v1→v2 evolution plan are in **[ARCHI
 | `user_data/strategies/risk_manager.py` | Correlation veto layer above Freqtrade's built-in protections |
 | `tools/monitor.py` | Live signal monitor — wallet, open trades, per-pair regime/proximity |
 | `tools/daily_report.py` | End-of-day P&L / Sharpe / drawdown report |
+| `tools/weekly_check.py` | Weekly headless Claude health check — writes markdown digest |
 | `tools/start_monitor.bat` / `tools/start_monitor.sh` | Double-click / shell launchers for the monitor |
 
 ---
@@ -105,19 +106,47 @@ Or use the platform-specific launchers:
 - Windows: double-click `tools\start_monitor.bat`
 - Linux: `./tools/start_monitor.sh`
 
-### 4. Schedule the daily report (optional)
+### 4. Schedule automated checks (optional)
 
-Run on demand:
+Two layers, both unattended:
+
+**Daily report** — telemetry digest, no LLM:
+
 ```sh
 python tools/daily_report.py
 ```
 
-Schedule it nightly:
+Writes `user_data/logs/report_YYYY-MM-DD.txt` and fires a desktop notification.
 
-- **Windows (Task Scheduler):** create a task that runs `python D:\path\to\AI-trader\tools\daily_report.py` daily at 23:55.
-- **Linux (cron):** `55 23 * * * cd /path/to/AI-trader && python3 tools/daily_report.py`
+**Weekly AI check** — headless `claude -p` reads the bot state, judges anomalies, writes a markdown digest:
 
-The report writes to `user_data/logs/report_YYYY-MM-DD.txt`. On Windows, `BurntToast` (if installed) shows a notification; on Linux, `notify-send` (if installed and a desktop session is active) does the same. Notifications are best-effort — the report still runs and writes its file when no notification system is available.
+```sh
+python tools/weekly_check.py
+python tools/weekly_check.py --dry-run    # preview the prompt without calling claude
+```
+
+Writes `user_data/logs/ai_check_YYYY-MM-DD.md` and notifies with the first flag (or "No flags raised"). Requires `claude` CLI on PATH.
+
+**Schedule both:**
+
+Windows (Task Scheduler) — run in an elevated PowerShell, adjust paths if needed:
+
+```powershell
+schtasks /Create /SC DAILY /TN "AI-Trader Daily Report" `
+  /TR "cmd /c cd /d D:\GitHub\AI-trader && python tools\daily_report.py" /ST 23:55
+
+schtasks /Create /SC WEEKLY /D SUN /TN "AI-Trader Weekly AI Check" `
+  /TR "cmd /c cd /d D:\GitHub\AI-trader && python tools\weekly_check.py" /ST 09:00
+```
+
+Linux (cron) — `crontab -e`:
+
+```
+55 23 * * *   cd /path/to/AI-trader && python3 tools/daily_report.py
+ 0  9 * * 0   cd /path/to/AI-trader && python3 tools/weekly_check.py
+```
+
+Notifications are best-effort: `BurntToast` on Windows, `notify-send` on Linux. If the notification system isn't available, both jobs still run and persist their files.
 
 ---
 
