@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 
 class RegimeAwareStrategy(IStrategy):
     INTERFACE_VERSION: int = 3
-    can_short: bool = True
+    can_short: bool = False  # SPOT ONLY — no shorting (user constraint, never futures)
 
     # 1h gives ~50 bars warmup for EMA(50). Subclass to switch timeframes.
     timeframe: str = "1h"

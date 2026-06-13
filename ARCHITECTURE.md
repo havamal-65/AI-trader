@@ -115,7 +115,7 @@ Regime → strategy is a lookup table.
 
 ```
 TRENDING_UP  → Momentum
-TRENDING_DOWN → Stay flat (or short via perp)
+TRENDING_DOWN → Stay flat
 RANGING_LOW  → Mean Reversion
 RANGING_HIGH → Bollinger Reversal (smaller size)
 CHOPPY       → Stay flat
@@ -212,7 +212,7 @@ The plan above is the design spec; this section records the concrete implementat
 
 **Strategy (1h, currently running paper):**
 - `RegimeClassifier` — ADX(14), BB-width(20), ATR-ratio with 30-bar median, EMA(50) slope → labels: `TRENDING_UP / TRENDING_DOWN / RANGING_LOW / RANGING_HIGH / CHOPPY`.
-- `RegimeAwareStrategy` — hard-mapped selector (Design 1 from above), shorts enabled, leverage locked at 1x, 2% stoploss, no `minimal_roi` ladder (signal-exit driven).
+- `RegimeAwareStrategy` — hard-mapped selector (Design 1 from above), spot-only (no shorts, no leverage), 2% stoploss, no `minimal_roi` ladder (signal-exit driven).
 
 **Risk layer (above Freqtrade's stoploss):**
 - `StoplossGuard` — pause new entries after 2 stops in 24 candles.

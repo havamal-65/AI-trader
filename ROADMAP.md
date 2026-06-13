@@ -7,7 +7,7 @@
 
 ## Current State (May 2026)
 
-Paper trading on OKX — BTC/USDT, ETH/USDT, SOL/USDT futures.
+Paper trading on OKX — BTC/USDT, ETH/USDT, SOL/USDT spot.
 $100 USDT dry-run wallet. Bot runs unattended in Docker.
 
 ---
@@ -16,7 +16,7 @@ $100 USDT dry-run wallet. Bot runs unattended in Docker.
 
 - [x] Freqtrade 2026.4 running in Docker (`docker-compose.yml`)
 - [x] OKX exchange connected (dry run — no API keys needed)
-- [x] 3 futures pairs: BTC/USDT:USDT, ETH/USDT:USDT, SOL/USDT:USDT
+- [x] 3 spot pairs: BTC/USDT, ETH/USDT, SOL/USDT
 - [x] SQLite trade persistence (`tradesv3.dryrun.sqlite`)
 - [x] FreqUI accessible at `localhost:8080`
 - [x] Risk layer: 2% stoploss, StoplossGuard, MaxDrawdown (3% daily / 8% weekly)
@@ -30,10 +30,10 @@ $100 USDT dry-run wallet. Bot runs unattended in Docker.
   - TRENDING_UP / TRENDING_DOWN / RANGING_LOW / RANGING_HIGH / CHOPPY
 - [x] `RegimeAwareStrategy` — hard-mapped selector (Design 1)
   - TRENDING_UP → momentum long (EMA cross + RSI filter)
-  - TRENDING_DOWN → momentum short (EMA cross + RSI filter)
+  - TRENDING_DOWN → stay flat
   - RANGING_LOW → mean reversion long (RSI < 30)
   - CHOPPY / RANGING_HIGH → stay flat
-- [x] Shorts enabled (`can_short = True`, futures mode, leverage locked at 1x)
+- [x] Spot mode (`can_short = False`, no leverage, no margin)
 - [x] BB reversal strategy removed (1.5% win rate in backtest)
 - [x] 2% stoploss confirmed optimal (wider triggers MaxDrawdown, net worse)
 - [x] Backtested: +1.13% profit in -36% bear market (2025), +0.44% over 18 months
@@ -63,7 +63,7 @@ $100 USDT dry-run wallet. Bot runs unattended in Docker.
 **Gate to Phase 5:** positive expectancy net of estimated fees, no regime-specific blowups.
 
 - [ ] Collect 60 days of paper trading data (started ~May 2026, target ~July 2026)
-- [ ] Open Kraken account with Intermediate KYC + futures trading enabled
+- [ ] Open a spot exchange account with KYC
 - [ ] Monitor per-regime win rate from daily reports
   - If RANGING_LOW mean-reversion underperforms → tune RSI threshold or disable
   - If regime is CHOPPY >70% of the time → review ADX thresholds
@@ -72,23 +72,23 @@ $100 USDT dry-run wallet. Bot runs unattended in Docker.
   - RSI overbought filter on entries (currently 65 / 35)
   - ADX trending threshold (currently 25)
 - [ ] Walk-forward validation: backtest on data the bot never saw
-- [ ] Review stoploss on Krakenfutures (fee structure differs from OKX)
+- [ ] Review stoploss on the live spot exchange (fee structure differs from OKX)
 
 ---
 
 ## Phase 5 — Live Trading Prep `PLANNED`
 
-**Gate to Phase 6:** Kraken account approved, secrets rotated, paper vs live fee model reconciled.
+**Gate to Phase 6:** spot exchange account approved, secrets rotated, paper vs live fee model reconciled.
 
-- [ ] Switch exchange to `krakenfutures` in `config.json`
-  - Update pair format to Kraken futures notation
+- [ ] Switch exchange to the live spot venue in `config.json`
+  - Update pair format to the live exchange's notation
   - Update `risk_manager.py` correlated pairs set
 - [ ] Rotate all secrets before going live
   - `jwt_secret_key` in `config.json`
   - `ws_token` in `config.json`
   - `api_server.password` in `config.json`
-- [ ] Confirm Kraken API keys work in dry-run first
-- [ ] Run 1–2 weeks paper on Krakenfutures to verify data feed and fills
+- [ ] Confirm live exchange API keys work in dry-run first
+- [ ] Run 1–2 weeks paper on the live spot exchange to verify data feed and fills
 - [ ] Set `dry_run: false` only after above passes
 
 ---
@@ -97,7 +97,7 @@ $100 USDT dry-run wallet. Bot runs unattended in Docker.
 
 **Gate to Phase 7:** 30+ days live with small size, performance matches paper within tolerance.
 
-- [ ] Go live with $100 USDT on Krakenfutures
+- [ ] Go live with $100 USDT on the spot exchange
 - [ ] Monitor daily: drawdown, regime distribution, per-tag win rate
 - [ ] Add tax export integration (CoinTracker or Koinly CSV from trade DB)
 - [ ] Add more pairs if liquidity and correlation analysis supports it
@@ -139,7 +139,7 @@ Full design in [ARCHITECTURE.md — Appendix A](ARCHITECTURE.md).
 
 | Decision | Status | Notes |
 |---|---|---|
-| Exchange for live trading | Kraken planned | User opening account |
+| Exchange for live trading | Spot venue TBD | Must support spot (no futures) |
 | Tax tracking tool | Not chosen | CoinTracker / Koinly both work |
 | Hosting | Local PC | Fine for now; VPS if uptime becomes critical |
 | Capital beyond $100 | Pending Phase 6 results | Wait for positive live track record |

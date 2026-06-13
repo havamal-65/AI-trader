@@ -2,14 +2,14 @@
 
 An adaptive crypto trading bot that classifies the current market regime (trending, ranging, choppy) and routes each pair to the strategy best suited to those conditions. Built on [Freqtrade](https://www.freqtrade.io/) with a custom regime classifier, hard-mapped strategy selector, multi-layer risk controls, and a cross-platform Python signal monitor (Windows + Linux) with optional desktop notifications.
 
-Currently in paper-trading on OKX perpetual futures (BTC, ETH, SOL).
+Currently in paper-trading on OKX spot (BTC, ETH, SOL).
 
 ---
 
 ## Architecture at a glance
 
 ```
-Exchange (OKX futures)
+Exchange (OKX spot)
         │  OHLCV via Freqtrade DataProvider
         ▼
 Regime Classifier  ──►  TRENDING_UP / TRENDING_DOWN / RANGING_LOW
@@ -19,7 +19,7 @@ Regime Classifier  ──►  TRENDING_UP / TRENDING_DOWN / RANGING_LOW
         ▼
 Strategy Selector (hard-mapped, Design 1)
    ├─ TRENDING_UP    → momentum long  (EMA cross + RSI filter)
-   ├─ TRENDING_DOWN  → momentum short (EMA cross + RSI filter)
+   ├─ TRENDING_DOWN  → stay flat
    ├─ RANGING_LOW    → mean reversion long (RSI < 30)
    └─ CHOPPY / HIGH  → stay flat
         │
@@ -43,7 +43,7 @@ Full system design, build phases, and the v1→v2 evolution plan are in **[ARCHI
 | Layer | Tool |
 |---|---|
 | Execution | [Freqtrade](https://www.freqtrade.io/) 2026.4 (Docker) |
-| Exchange | OKX perpetual futures (paper trading) via `ccxt` |
+| Exchange | OKX spot (paper trading) via `ccxt` |
 | Indicators | TA-Lib, `qtpylib` (VWAP), pandas |
 | Persistence | SQLite (`tradesv3.dryrun.sqlite`) |
 | Monitoring | Python 3.10+ (stdlib only) + Freqtrade REST API + cross-platform desktop notifications (BurntToast on Windows, `notify-send` on Linux) |
@@ -166,7 +166,7 @@ Strategy changes go through this gauntlet before any consideration of live deplo
 
 - ✅ **Phase 1–3:** Foundation, regime-aware strategy, monitoring infrastructure
 - 🟡 **Phase 4:** Paper trading (in progress, ~60-day target)
-- ⏳ **Phase 5–6:** Move to Kraken Futures with rotated secrets; small-size live trading
+- ⏳ **Phase 5–6:** Move to a spot exchange with rotated secrets; small-size live trading
 - 🔮 **Phase 7–8:** Volatility-based dynamic sizing, HMM regime classifier, v2 hybrid orchestrator
 
 Detail in [ROADMAP.md](ROADMAP.md).
